@@ -20,6 +20,7 @@ typeset -g  _SUKI_TIMINGS_GIT=0
 typeset -gA _SUKI_ASYNC_TOP_VALS
 typeset -gA _SUKI_ASYNC_BOTTOM_VALS
 typeset -gA _SUKI_ASYNC_POST_PATH_VALS
+typeset -gi _SUKI_PROMPT_LEN_RESULT=0
 
 # Async infrastructure
 typeset -g _SUKI_GIT_FD
@@ -27,6 +28,15 @@ typeset -g _SUKI_GIT_LOADING=1
 typeset -g _SUKI_TOP_ASYNC_FD
 typeset -g _SUKI_BOTTOM_ASYNC_FD
 typeset -g _SUKI_POST_PATH_ASYNC_FD
+
+function _suki_prompt_len() {
+  emulate -L zsh
+  setopt extended_glob
+  local s="${1//\%\%/x}"
+  s="${s//\%(f|k|<->[FK]|[FK]\{[^\}]##\})}"
+  s="${s//\%[BbUuSs]}"
+  _SUKI_PROMPT_LEN_RESULT="${(m)#s}"
+}
 
 function _suki_gitstatus_format() {
   emulate -L zsh
@@ -68,7 +78,8 @@ function _suki_gitstatus_format() {
   (( VCS_STATUS_NUM_UNTRACKED  )) && p+=" ${untracked}?${VCS_STATUS_NUM_UNTRACKED}"
 
   local prompt_str="${p}%f"
-  local prompt_len="${(m)#${${${prompt_str//\%\%/x}//\%(f|k|<->[FK])}//\%[BbUuSs]}}"
+  _suki_prompt_len "$prompt_str"
+  local prompt_len=$_SUKI_PROMPT_LEN_RESULT
   echo "${prompt_len}|${prompt_str}"
 }
 
@@ -243,7 +254,8 @@ function suki_right_prompt_update() {
     [[ -n "$output" ]] && top_segments+=("${output}")
   done
   typeset -g SUKI_TOP_RIGHT_PROMPT="${(j: :)top_segments}"
-  typeset -gi SUKI_TOP_RIGHT_PROMPT_LEN="${(m)#${${${SUKI_TOP_RIGHT_PROMPT//\%\%/x}//\%(f|k|<->[FK])}//\%[BbUuSs]}}"
+  _suki_prompt_len "$SUKI_TOP_RIGHT_PROMPT"
+  typeset -gi SUKI_TOP_RIGHT_PROMPT_LEN=$_SUKI_PROMPT_LEN_RESULT
 
   # Bottom right modules (RPROMPT)
   local -a bottom_segments
@@ -308,7 +320,8 @@ function suki_right_prompt_update() {
     [[ -n "$output" ]] && post_path_segments+=("${output}")
   done
   typeset -g SUKI_POST_PATH_PROMPT="${(j: :)post_path_segments}"
-  typeset -gi SUKI_POST_PATH_PROMPT_LEN="${(m)#${${${SUKI_POST_PATH_PROMPT//\%\%/x}//\%(f|k|<->[FK])}//\%[BbUuSs]}}"
+  _suki_prompt_len "$SUKI_POST_PATH_PROMPT"
+  typeset -gi SUKI_POST_PATH_PROMPT_LEN=$_SUKI_PROMPT_LEN_RESULT
 
   _suki_recalculate_layout
 }
